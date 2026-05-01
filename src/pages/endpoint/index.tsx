@@ -1,9 +1,10 @@
 import React from 'react';
 import { useFormik } from 'formik';
-import { getAppId, getDefaultAppIdAndUrl, getSocketURL } from '@/components/shared';
+import { getAppId, getSocketURL } from '@/components/shared';
 import { Button, Input, Text } from '@deriv-com/ui';
 import { LocalStorageConstants } from '@deriv-com/utils';
 import './endpoint.scss';
+
 const Endpoint = () => {
     const formik = useFormik({
         initialValues: {
@@ -14,6 +15,8 @@ const Endpoint = () => {
             localStorage.setItem(LocalStorageConstants.configServerURL, values.serverUrl);
             localStorage.setItem(LocalStorageConstants.configAppId, values.appId.toString());
             formik.resetForm({ values });
+            // Reload to apply new settings
+            window.location.reload();
         },
         validate: values => {
             const errors: { [key: string]: string } = {};
@@ -28,6 +31,30 @@ const Endpoint = () => {
             return errors;
         },
     });
+
+    // Helper function to get default values
+    const getDefaultAppIdAndUrl = () => {
+        // You need to define what the "original" settings are
+        // Based on your config, these might be:
+        return {
+            server_url: 'ws.derivws.com', // Default WebSocket server
+            app_id: getAppId(), // This already returns the default based on environment
+        };
+    };
+
+    const handleReset = () => {
+        const { server_url, app_id } = getDefaultAppIdAndUrl();
+        localStorage.setItem(LocalStorageConstants.configServerURL, server_url);
+        localStorage.setItem(LocalStorageConstants.configAppId, app_id.toString());
+
+        formik.resetForm({
+            values: {
+                appId: app_id,
+                serverUrl: server_url,
+            },
+        });
+        window.location.reload();
+    };
 
     return (
         <div className='endpoint'>
@@ -60,19 +87,7 @@ const Endpoint = () => {
                     <Button
                         className='endpoint__button'
                         color='black'
-                        onClick={() => {
-                            const { server_url, app_id } = getDefaultAppIdAndUrl();
-                            localStorage.setItem(LocalStorageConstants.configServerURL, server_url);
-                            localStorage.setItem(LocalStorageConstants.configAppId, app_id.toString());
-
-                            formik.resetForm({
-                                values: {
-                                    appId: app_id,
-                                    serverUrl: server_url,
-                                },
-                            });
-                            window.location.reload();
-                        }}
+                        onClick={handleReset}
                         variant='outlined'
                         type='button'
                     >
