@@ -1,0 +1,432 @@
+// ======================================
+// VARIABLES & THEMES - DYNAMIC COLOR SYSTEM
+// ======================================
+$primary-dark: #0a0c15;
+$secondary-dark: #111827;
+$glow-gold: #f5b042;
+$glow-cyan: #00e0ff;
+$glow-emerald: #10b981;
+$glow-purple: #c084fc;
+$glow-rose: #fb7185;
+$text-light: #f3f4f6;
+$text-dim: #9ca3af;
+
+// Animated gradient shifts
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes floatPulse {
+  0% { transform: translateY(0px) scale(1); opacity: 0.3; }
+  100% { transform: translateY(-30px) scale(1.1); opacity: 0; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes glitchText {
+  0% { text-shadow: 0.05em 0 0 rgba(255,0,0,0.5), -0.05em -0.025em 0 rgba(0,255,0,0.5); }
+  25% { text-shadow: -0.05em -0.025em 0 rgba(255,0,0,0.5), 0.025em 0.05em 0 rgba(0,255,255,0.5); }
+  50% { text-shadow: 0.025em 0.05em 0 rgba(255,0,0,0.5), 0.05em 0 0 rgba(0,255,0,0.5); }
+  75% { text-shadow: -0.025em 0 0 rgba(255,0,0,0.5), 0.025em 0.025em 0 rgba(0,255,255,0.5); }
+  100% { text-shadow: 0.05em 0 0 rgba(255,0,0,0.5), -0.05em -0.025em 0 rgba(0,255,0,0.5); }
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+// ======================================
+// LOADER BASE (MERGED - NO DUPLICATION)
+// ======================================
+.trading-hub-loader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  // === BACKGROUND IMAGE SETUP ===
+  // OPTION 1: Use local image from public folder
+  background-image: url('../../assets/ramz.jpg');
+  
+  // OPTION 2: Use gradient background (uncomment to use instead)
+  // background: radial-gradient(circle at 30% 10%, #0b0e1a, #020408);
+  
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  
+  backdrop-filter: blur(2px);
+  animation: fadeOut 0.5s ease forwards;
+  animation-delay: 5.8s;
+  
+  // Dark overlay for better text readability
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.65);
+    z-index: 1;
+  }
+  
+  // Make sure content stays above overlay
+  .loader-container {
+    z-index: 2;
+  }
+}
+
+// ======================================
+// BACKGROUND DYNAMIC ELEMENTS
+// ======================================
+.background-elements {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+
+  .star {
+    position: absolute;
+    background: radial-gradient(circle, #fff, rgba(255,255,200,0.6));
+    border-radius: 50%;
+    animation: twinkle var(--duration, 4s) infinite alternate ease-in-out;
+    opacity: var(--opacity, 0.7);
+    box-shadow: 0 0 2px rgba(255,255,200,0.8);
+    
+    @keyframes twinkle {
+      0% { opacity: 0.2; transform: scale(1); }
+      100% { opacity: var(--opacity, 0.9); transform: scale(1.2); }
+    }
+  }
+
+  .dollar {
+    position: absolute;
+    top: -10%;
+    font-weight: 900;
+    filter: drop-shadow(0 0 6px currentColor);
+    animation: fall linear forwards;
+    color: #760abe;
+    text-shadow: 0 0 4px rgba(250,204,21,0.6);
+    will-change: transform;
+    
+    @keyframes fall {
+      0% {
+        transform: translateY(0) rotate(0deg) translateX(0);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(100vh) rotate(360deg) translateX(var(--drift, 0px));
+        opacity: 0;
+      }
+    }
+  }
+  
+  // floating orbs / bubbles for extra richness
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,215,0,0.2), rgba(0,255,255,0.05));
+    filter: blur(25px);
+    animation: floatOrb 12s infinite alternate;
+    pointer-events: none;
+    
+    @keyframes floatOrb {
+      0% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+      100% { transform: translate(40px, -50px) scale(1.5); opacity: 0.6; }
+    }
+  }
+}
+
+// ======================================
+// MAIN CARD / CONTAINER (LUXURY GLASS)
+// ======================================
+.loader-container {
+  position: relative;
+  z-index: 20;
+  width: min(90%, 560px);
+  background: rgba(15, 25, 45, 0.55);
+  backdrop-filter: blur(18px);
+  border-radius: 48px;
+  padding: 2.5rem 2rem;
+  border: 1px solid rgba(255,215,0,0.3);
+  box-shadow: 0 25px 45px rgba(0,0,0,0.5), 0 0 0 1px rgba(245,176,66,0.2) inset, 0 0 20px rgba(0,224,255,0.2);
+  transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1), box-shadow 0.3s;
+  animation: cardGlowPulse 2s infinite alternate, colorCycleBg 6s infinite;
+  
+  @keyframes cardGlowPulse {
+    0% { box-shadow: 0 25px 45px rgba(0,0,0,0.5), 0 0 0 1px rgba(245,176,66,0.2) inset, 0 0 15px rgba(0,224,255,0.15); }
+    100% { box-shadow: 0 30px 55px rgba(0,0,0,0.6), 0 0 0 2px rgba(245,176,66,0.5) inset, 0 0 35px rgba(0,224,255,0.5); }
+  }
+  
+  &:hover {
+    transform: translateY(-6px) scale(1.01);
+    border-color: rgba(108, 74, 120, 0.6);
+  }
+}
+
+// ======================================
+// LOGO SECTION (GRADIENT TEXT)
+// ======================================
+.logo {
+  text-align: center;
+  margin-bottom: 2rem;
+  position: relative;
+  
+  .logo-main {
+    font-size: 3.5rem;
+    font-weight: 800;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, #5d64a3, #6406a8, #FF8C42, #D4AF37);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: gradientShift 4s ease infinite, glitchText 3s infinite;
+    text-transform: uppercase;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
+  }
+  
+  .logo-sub {
+    font-size: 0.9rem;
+    letter-spacing: 6px;
+    font-weight: 500;
+    background: linear-gradient(120deg, #a0c4ff, #c084fc);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-top: -8px;
+    text-transform: uppercase;
+  }
+}
+
+// ======================================
+// WELCOME MESSAGE DYNAMIC
+// ======================================
+.welcome-message {
+  text-align: center;
+  margin-bottom: 2rem;
+  
+  .welcome-title {
+    font-size: 1rem;
+    font-weight: 600;
+    background: linear-gradient(90deg, #facc15, #ffb347);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    animation: shimmer 3s infinite linear;
+    background-size: 200% auto;
+  }
+  
+  .welcome-text {
+    font-size: 0.85rem;
+    color: #b9c7d9;
+    margin-top: 8px;
+    font-weight: 400;
+    backdrop-filter: blur(4px);
+  }
+}
+
+// ======================================
+// FEATURES CARD (MODERN)
+// ======================================
+.features-container {
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 32px;
+  padding: 1.2rem 1.5rem;
+  margin: 1.5rem 0;
+  backdrop-filter: blur(8px);
+  border-left: 3px solid #facc15;
+  transition: all 0.3s;
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.5);
+    border-left-width: 5px;
+  }
+  
+  .feature-main {
+    font-size: 1.2rem;
+    font-weight: 700;
+    background: linear-gradient(95deg, #FFE6B0, #FFB347);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 12px;
+    display: inline-block;
+  }
+  
+  .feature-list {
+    list-style: none;
+    display: flex;
+    gap: 1.2rem;
+    margin: 1rem 0;
+    flex-wrap: wrap;
+    
+    .feature-item {
+      background: rgba(255,255,200,0.08);
+      padding: 0.3rem 1rem;
+      border-radius: 40px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #f3f4f6;
+      border: 1px solid rgba(245,176,66,0.5);
+      transition: all 0.2s;
+      backdrop-filter: blur(2px);
+      
+      &:hover {
+        background: rgba(245,176,66,0.25);
+        transform: scale(1.05);
+        border-color: gold;
+        box-shadow: 0 0 8px gold;
+      }
+    }
+  }
+  
+  .feature-tagline {
+    font-size: 0.8rem;
+    font-style: italic;
+    color: #9ca3af;
+    text-align: center;
+    margin-top: 8px;
+    letter-spacing: 0.3px;
+  }
+}
+
+// ======================================
+// PROGRESS BAR (NEON ANIMATION)
+// ======================================
+.progress-container {
+  margin-top: 1.8rem;
+  
+  .progress-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #facc15;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    
+    .progress-percent {
+      font-family: monospace;
+      font-weight: 800;
+      background: linear-gradient(145deg, #ffe6b0, #f5b042);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      font-size: 1.1rem;
+    }
+  }
+  
+  .progress-bar {
+    width: 100%;
+    height: 10px;
+    background: rgba(30, 40, 60, 0.8);
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 1px 2px #00000055;
+    
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #1b0ab1, #ffb347, #f59e0b, #facc15);
+      background-size: 300% 100%;
+      border-radius: 20px;
+      transition: width 0.08s linear;
+      animation: fillShine 1.2s infinite alternate;
+      box-shadow: 0 0 6px gold;
+      
+      @keyframes fillShine {
+        0% { background-position: 0% 0%; }
+        100% { background-position: 100% 0%; }
+      }
+    }
+  }
+  
+  .progress-dots {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 16px;
+    
+    .progress-dot {
+      width: 8px;
+      height: 8px;
+      background: gold;
+      border-radius: 50%;
+      animation: dotWave 1.2s infinite ease-in-out;
+      box-shadow: 0 0 6px orange;
+      
+      &:nth-child(1) { animation-delay: 0s; }
+      &:nth-child(2) { animation-delay: 0.2s; }
+      &:nth-child(3) { animation-delay: 0.4s; }
+      
+      @keyframes dotWave {
+        0%, 100% { transform: translateY(0); opacity: 0.4; background: #facc15; }
+        50% { transform: translateY(-6px); opacity: 1; background: #ffb347; box-shadow: 0 0 12px #facc15; }
+      }
+    }
+  }
+}
+
+// ======================================
+// ADDITIONAL GLOW & COLOR ROTATION
+// ======================================
+@keyframes colorCycleBg {
+  0% { border-color: rgba(245,176,66,0.4); }
+  33% { border-color: rgba(0,224,255,0.5); }
+  66% { border-color: rgba(192,132,252,0.5); }
+  100% { border-color: rgba(245,176,66,0.4); }
+}
+
+// make dollar bills multicolored
+.dollar {
+  filter: drop-shadow(0 0 3px currentColor);
+  animation: fallWithColor 0.8s linear forwards;
+}
+
+@keyframes fallWithColor {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+// responsive touch
+@media (max-width: 550px) {
+  .loader-container {
+    padding: 1.5rem 1.2rem;
+    width: 94%;
+  }
+  .logo-main {
+    font-size: 2.2rem !important;
+  }
+  .feature-list {
+    gap: 0.5rem !important;
+  }
+}
