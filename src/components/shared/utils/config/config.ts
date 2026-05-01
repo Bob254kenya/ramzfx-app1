@@ -3,8 +3,6 @@
 // Compatible with new Deriv authentication flow
 // ======================================================
 
-import { LocalStorageConstants, LocalStorageUtils, URLUtils } from '@deriv-com/utils';
-
 // ======================================================
 // APP IDS
 // ======================================================
@@ -93,7 +91,7 @@ export const getAppId = () => {
         app_id = APP_IDS.LOCALHOST;
     } else {
         app_id =
-            domain_app_ids[current_domain as keyof typeof domain_app_ids] ??
+            domain_app_ids[current_domain] ??
             APP_IDS.PRODUCTION;
     }
 
@@ -153,7 +151,7 @@ export const loginWithDeriv = () => {
 // EXCHANGE AUTHORIZATION CODE FOR ACCESS TOKEN
 // ======================================================
 
-export const exchangeCodeForToken = async (code: string) => {
+export const exchangeCodeForToken = async (code) => {
     try {
         const response = await fetch(
             'https://oauth.deriv.com/oauth2/token',
@@ -270,40 +268,6 @@ export const getValidAccessToken = async () => {
 };
 
 // ======================================================
-// HANDLE OAUTH CALLBACK
-// ======================================================
-
-export const handleOAuthCallback = async () => {
-    const params = new URLSearchParams(window.location.search);
-
-    const code = params.get('code');
-    const state = params.get('state');
-
-    const saved_state =
-        localStorage.getItem('deriv_oauth_state');
-
-    if (!code) {
-        return null;
-    }
-
-    // CSRF Protection
-    if (state !== saved_state) {
-        throw new Error('Invalid OAuth state');
-    }
-
-    const token_data = await exchangeCodeForToken(code);
-
-    // Clean URL
-    window.history.replaceState(
-        {},
-        document.title,
-        window.location.pathname
-    );
-
-    return token_data;
-};
-
-// ======================================================
 // CREATE AUTHORIZED WEBSOCKET
 // ======================================================
 
@@ -312,7 +276,7 @@ export const createDerivConnection = async () => {
 
     const ws = new WebSocket(DERIV_WS_URL());
 
-    return new Promise<WebSocket>((resolve, reject) => {
+    return new Promise((resolve, reject) => {
         ws.onopen = () => {
             ws.send(
                 JSON.stringify({
@@ -378,25 +342,6 @@ export const restoreDerivSession = async () => {
 
         return null;
     }
-};
-
-// ======================================================
-// LOGOUT
-// ======================================================
-
-export const logoutDeriv = () => {
-    const keys = [
-        'deriv_access_token',
-        'deriv_refresh_token',
-        'deriv_token_expires_at',
-        'deriv_oauth_state',
-        'deriv_loginid',
-        'deriv_currency',
-    ];
-
-    keys.forEach(key => localStorage.removeItem(key));
-
-    window.location.href = '/login';
 };
 
 // ======================================================
