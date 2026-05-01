@@ -1,139 +1,411 @@
+// ======================================================
+// DERIV MODERN AUTH SYSTEM (OAuth + WebSocket API)
+// Compatible with new Deriv authentication flow
+// ======================================================
+
 import { LocalStorageConstants, LocalStorageUtils, URLUtils } from '@deriv-com/utils';
-import { isStaging } from '../url/helpers';
+
+// ======================================================
+// APP IDS
+// ======================================================
 
 export const APP_IDS = {
     LOCALHOST: 36300,
     STAGING: 29934,
-    PRODUCTION: 131526,
+    PRODUCTION: 131592,
 };
 
-export const livechat_license_id = 12049137;
-export const livechat_client_id = '66aa088aad5a414484c1fd1fa8a5ace7';
+// ======================================================
+// OAUTH CONFIG
+// ======================================================
+
+// OAuth Client ID from Deriv Developer Dashboard
+export const DERIV_CLIENT_ID = '32ZV1tqChTs1hNdvQ7skk';
+
+// MUST match EXACTLY what is configured in Deriv Dashboard
+export const DERIV_REDIRECT_URI = 'https://ramzfx.site';
+
+// Legacy App ID support
+export const DERIV_APP_ID = APP_IDS.PRODUCTION;
+
+// ======================================================
+// DOMAIN CONFIG
+// ======================================================
 
 export const domain_app_ids = {
-    'bossiousfx.vercel.app': 131526,
-    'www.bossiousfx.site': 131526,
+    'ramzfx.site': APP_IDS.PRODUCTION,
+    'www.ramzfx.site': APP_IDS.PRODUCTION,
+    'bossiousfx.vercel.app': APP_IDS.PRODUCTION,
+};
+
+// ======================================================
+// HELPERS
+// ======================================================
+
+export const isLocal = () =>
+    /localhost(:\d+)?$/i.test(window.location.hostname);
+
+export const isProduction = () => {
+    const all_domains = Object.keys(domain_app_ids).map(
+        domain => `(www\\.)?${domain.replace('.', '\\.')}`
+    );
+
+    return new RegExp(`^(${all_domains.join('|')})$`, 'i').test(
+        window.location.hostname
+    );
 };
 
 export const getCurrentProductionDomain = () =>
     !/^staging\./.test(window.location.hostname) &&
-    Object.keys(domain_app_ids).find(domain => window.location.hostname === domain);
-
-export const isProduction = () => {
-    const all_domains = Object.keys(domain_app_ids).map(domain => `(www\\.)?${domain.replace('.', '\\.')}`);
-    return new RegExp(`^(${all_domains.join('|')})$`, 'i').test(window.location.hostname);
-};
-
-export const isTestLink = () => {
-    return (
-        window.location.origin?.includes('.binary.sx') ||
-        window.location.origin?.includes('bot-65f.pages.dev') ||
-        isLocal()
+    Object.keys(domain_app_ids).find(
+        domain => window.location.hostname === domain
     );
-};
 
-export const isLocal = () => /localhost(:\d+)?$/i.test(window.location.hostname);
+// ======================================================
+// WEBSOCKET SERVER
+// ======================================================
 
-const getDefaultServerURL = () => {
-    const server = 'ws';
-    const server_url = `${server}.derivws.com`;
+export const getSocketURL = () => {
+    const local_storage_server_url =
+        window.localStorage.getItem('config.server_url');
 
-    return server_url;
-};
-
-export const getDefaultAppIdAndUrl = () => {
-    const server_url = getDefaultServerURL();
-
-    if (isTestLink()) {
-        return { app_id: APP_IDS.LOCALHOST, server_url };
+    if (local_storage_server_url) {
+        return local_storage_server_url;
     }
 
-    const current_domain = getCurrentProductionDomain() ?? '';
-    const app_id = domain_app_ids[current_domain as keyof typeof domain_app_ids] ?? APP_IDS.PRODUCTION;
-
-    return { app_id, server_url };
+    return 'ws.derivws.com';
 };
+
+// ======================================================
+// APP ID
+// ======================================================
 
 export const getAppId = () => {
-    if (process.env.VITE_DERIV_APP_ID) {
-        return process.env.VITE_DERIV_APP_ID;
+    if (import.meta.env.VITE_DERIV_APP_ID) {
+        return import.meta.env.VITE_DERIV_APP_ID;
     }
-    let app_id = null;
+
     const current_domain = getCurrentProductionDomain() ?? '';
 
-    if (isStaging()) {
-        app_id = APP_IDS.STAGING;
-    } else if (isTestLink()) {
+    let app_id = APP_IDS.PRODUCTION;
+
+    if (isLocal()) {
         app_id = APP_IDS.LOCALHOST;
     } else {
-        app_id = domain_app_ids[current_domain as keyof typeof domain_app_ids] ?? APP_IDS.PRODUCTION;
+        app_id =
+            domain_app_ids[current_domain as keyof typeof domain_app_ids] ??
+            APP_IDS.PRODUCTION;
     }
 
-    window.localStorage.setItem('config.app_id', app_id.toString());
+    localStorage.setItem('config.app_id', String(app_id));
+
     return app_id;
 };
 
-export const getSocketURL = () => {
-    const local_storage_server_url = window.localStorage.getItem('config.server_url');
-    if (local_storage_server_url) return local_storage_server_url;
+// ======================================================
+// WEBSOCKET URL
+// ======================================================
 
-    const server_url = getDefaultServerURL();
+export const DERIV_WS_URL = () => {
+    const server_url = getSocketURL();
+    const app_id = getAppId();
 
-    return server_url;
+    return `wss://${server_url}/websockets/v3?app_id=${app_id}`;
 };
 
-export const checkAndSetEndpointFromUrl = () => {
-    if (isTestLink()) {
-        const url_params = new URLSearchParams(location.search.slice(1));
-
-        if (url_params.has('qa_server') && url_params.has('app_id')) {
-            const qa_server = url_params.get('qa_server') || '';
-            const app_id = url_params.get('app_id') || '';
-
-            url_params.delete('qa_server');
-            url_params.delete('app_id');
-
-            if (/^(^(www\.)?qa[0-9]{1,4}\.deriv.dev|(.*)\.derivws\.com)$/.test(qa_server) && /^[0-9]+$/.test(app_id)) {
-                localStorage.setItem('config.app_id', app_id);
-                localStorage.setItem('config.server_url', qa_server.replace(/"/g, ''));
-            }
-
-            const params = url_params.toString();
-            const hash = location.hash;
-
-            location.href = `${location.protocol}//${location.hostname}${location.pathname}${
-                params ? `?${params}` : ''
-            }${hash || ''}`;
-
-            return true;
-        }
-    }
-
-    return false;
-};
-
-export const getDebugServiceWorker = () => {
-    const debug_service_worker_flag = window.localStorage.getItem('debug_service_worker');
-    if (debug_service_worker_flag) return !!parseInt(debug_service_worker_flag);
-
-    return false;
-};
+// ======================================================
+// MODERN OAUTH URL GENERATOR
+// ======================================================
 
 export const generateOAuthURL = () => {
-    const { getOauthURL } = URLUtils;
-    const oauth_url = getOauthURL();
-    const original_url = new URL(oauth_url);
-    const configured_server_url = (LocalStorageUtils.getValue(LocalStorageConstants.configServerURL) ||
-        localStorage.getItem('config.server_url') ||
-        original_url.hostname) as string;
+    const state = crypto.randomUUID();
 
-    const valid_server_urls = ['green.derivws.com', 'red.derivws.com', 'blue.derivws.com'];
-    if (
-        typeof configured_server_url === 'string'
-            ? !valid_server_urls.includes(configured_server_url)
-            : !valid_server_urls.includes(JSON.stringify(configured_server_url))
-    ) {
-        original_url.hostname = configured_server_url;
+    localStorage.setItem('deriv_oauth_state', state);
+
+    const scopes = [
+        'read',
+        'trade',
+        'payments',
+        'admin',
+        'trading_information'
+    ].join(' ');
+
+    const params = new URLSearchParams({
+        client_id: DERIV_CLIENT_ID,
+        redirect_uri: DERIV_REDIRECT_URI,
+        response_type: 'code',
+        scope: scopes,
+        state,
+    });
+
+    return `https://oauth.deriv.com/oauth2/authorize?${params.toString()}`;
+};
+
+// ======================================================
+// LOGIN
+// ======================================================
+
+export const loginWithDeriv = () => {
+    window.location.href = generateOAuthURL();
+};
+
+// ======================================================
+// EXCHANGE AUTHORIZATION CODE FOR ACCESS TOKEN
+// ======================================================
+
+export const exchangeCodeForToken = async (code: string) => {
+    try {
+        const response = await fetch(
+            'https://oauth.deriv.com/oauth2/token',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    grant_type: 'authorization_code',
+                    code,
+                    client_id: DERIV_CLIENT_ID,
+                    redirect_uri: DERIV_REDIRECT_URI,
+                }),
+            }
+        );
+
+        const data = await response.json();
+
+        if (data.error) {
+            throw new Error(data.error.message || 'OAuth failed');
+        }
+
+        // Store tokens securely
+        localStorage.setItem(
+            'deriv_access_token',
+            data.access_token
+        );
+
+        if (data.refresh_token) {
+            localStorage.setItem(
+                'deriv_refresh_token',
+                data.refresh_token
+            );
+        }
+
+        if (data.expires_in) {
+            const expires_at =
+                Date.now() + data.expires_in * 1000;
+
+            localStorage.setItem(
+                'deriv_token_expires_at',
+                String(expires_at)
+            );
+        }
+
+        return data;
+    } catch (error) {
+        console.error('OAuth token exchange failed:', error);
+        throw error;
     }
-    return original_url.toString() || oauth_url;
+};
+
+// ======================================================
+// REFRESH ACCESS TOKEN
+// ======================================================
+
+export const refreshAccessToken = async () => {
+    const refresh_token =
+        localStorage.getItem('deriv_refresh_token');
+
+    if (!refresh_token) {
+        throw new Error('No refresh token found');
+    }
+
+    const response = await fetch(
+        'https://oauth.deriv.com/oauth2/token',
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                grant_type: 'refresh_token',
+                refresh_token,
+                client_id: DERIV_CLIENT_ID,
+            }),
+        }
+    );
+
+    const data = await response.json();
+
+    if (data.error) {
+        logoutDeriv();
+        throw new Error(data.error.message);
+    }
+
+    localStorage.setItem(
+        'deriv_access_token',
+        data.access_token
+    );
+
+    return data.access_token;
+};
+
+// ======================================================
+// GET VALID TOKEN
+// ======================================================
+
+export const getValidAccessToken = async () => {
+    const token = localStorage.getItem('deriv_access_token');
+
+    const expires_at = Number(
+        localStorage.getItem('deriv_token_expires_at')
+    );
+
+    // Token still valid
+    if (token && Date.now() < expires_at - 60000) {
+        return token;
+    }
+
+    // Refresh token
+    return await refreshAccessToken();
+};
+
+// ======================================================
+// HANDLE OAUTH CALLBACK
+// ======================================================
+
+export const handleOAuthCallback = async () => {
+    const params = new URLSearchParams(window.location.search);
+
+    const code = params.get('code');
+    const state = params.get('state');
+
+    const saved_state =
+        localStorage.getItem('deriv_oauth_state');
+
+    if (!code) {
+        return null;
+    }
+
+    // CSRF Protection
+    if (state !== saved_state) {
+        throw new Error('Invalid OAuth state');
+    }
+
+    const token_data = await exchangeCodeForToken(code);
+
+    // Clean URL
+    window.history.replaceState(
+        {},
+        document.title,
+        window.location.pathname
+    );
+
+    return token_data;
+};
+
+// ======================================================
+// CREATE AUTHORIZED WEBSOCKET
+// ======================================================
+
+export const createDerivConnection = async () => {
+    const token = await getValidAccessToken();
+
+    const ws = new WebSocket(DERIV_WS_URL());
+
+    return new Promise<WebSocket>((resolve, reject) => {
+        ws.onopen = () => {
+            ws.send(
+                JSON.stringify({
+                    authorize: token,
+                })
+            );
+        };
+
+        ws.onmessage = event => {
+            const data = JSON.parse(event.data);
+
+            // Authorized successfully
+            if (data.msg_type === 'authorize') {
+                console.log('Deriv Authorized:', data);
+
+                localStorage.setItem(
+                    'deriv_loginid',
+                    data.authorize.loginid
+                );
+
+                localStorage.setItem(
+                    'deriv_currency',
+                    data.authorize.currency
+                );
+
+                resolve(ws);
+            }
+
+            // Error
+            if (data.error) {
+                console.error('Authorization Error:', data.error);
+
+                reject(data.error);
+            }
+        };
+
+        ws.onerror = error => {
+            reject(error);
+        };
+    });
+};
+
+// ======================================================
+// AUTO SESSION RESTORE
+// ======================================================
+
+export const restoreDerivSession = async () => {
+    try {
+        const token =
+            localStorage.getItem('deriv_access_token');
+
+        if (!token) {
+            return null;
+        }
+
+        const ws = await createDerivConnection();
+
+        return ws;
+    } catch (error) {
+        console.error('Session restore failed:', error);
+
+        logoutDeriv();
+
+        return null;
+    }
+};
+
+// ======================================================
+// LOGOUT
+// ======================================================
+
+export const logoutDeriv = () => {
+    const keys = [
+        'deriv_access_token',
+        'deriv_refresh_token',
+        'deriv_token_expires_at',
+        'deriv_oauth_state',
+        'deriv_loginid',
+        'deriv_currency',
+    ];
+
+    keys.forEach(key => localStorage.removeItem(key));
+
+    window.location.href = '/login';
+};
+
+// ======================================================
+// USER INFO
+// ======================================================
+
+export const getStoredUser = () => {
+    return {
+        loginid: localStorage.getItem('deriv_loginid'),
+        currency: localStorage.getItem('deriv_currency'),
+    };
 };
