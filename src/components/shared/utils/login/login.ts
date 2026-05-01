@@ -194,128 +194,6 @@ export const loginUrl = ({ language }: TLoginUrl) => {
 };
 
 // ======================================================
-// HANDLE OAUTH CALLBACK
-// ======================================================
-
-export const handleOAuthCallback = async () => {
-    const params = new URLSearchParams(
-        window.location.search
-    );
-
-    const code = params.get('code');
-    const state = params.get('state');
-
-    if (!code) {
-        return null;
-    }
-
-    // ==================================================
-    // VERIFY STATE
-    // ==================================================
-
-    const saved_state =
-        localStorage.getItem('deriv_oauth_state');
-
-    if (state !== saved_state) {
-        throw new Error('Invalid OAuth state');
-    }
-
-    // ==================================================
-    // EXCHANGE TOKEN
-    // ==================================================
-
-    const response = await fetch(
-        'https://oauth.deriv.com/oauth2/token',
-        {
-            method: 'POST',
-            headers: {
-                'Content-Type':
-                    'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                grant_type: 'authorization_code',
-                code,
-                client_id: DERIV_CLIENT_ID,
-                redirect_uri: DERIV_REDIRECT_URI,
-            }),
-        }
-    );
-
-    const data = await response.json();
-
-    if (data.error) {
-        throw new Error(
-            data.error.message || 'OAuth failed'
-        );
-    }
-
-    // ==================================================
-    // SAVE TOKENS
-    // ==================================================
-
-    localStorage.setItem(
-        'deriv_access_token',
-        data.access_token
-    );
-
-    if (data.refresh_token) {
-        localStorage.setItem(
-            'deriv_refresh_token',
-            data.refresh_token
-        );
-    }
-
-    if (data.expires_in) {
-        localStorage.setItem(
-            'deriv_token_expires_at',
-            String(
-                Date.now() + data.expires_in * 1000
-            )
-        );
-    }
-
-    // ==================================================
-    // CLEAN URL
-    // ==================================================
-
-    window.history.replaceState(
-        {},
-        document.title,
-        window.location.pathname
-    );
-
-    // ==================================================
-    // REDIRECT BACK
-    // ==================================================
-
-    const redirect_url =
-        sessionStorage.getItem('redirect_url');
-
-    if (redirect_url) {
-        sessionStorage.removeItem('redirect_url');
-
-        window.location.href = redirect_url;
-    }
-
-    return data;
-};
-
-// ======================================================
-// LOGOUT
-// ======================================================
-
-export const logoutDeriv = () => {
-    [
-        'deriv_access_token',
-        'deriv_refresh_token',
-        'deriv_token_expires_at',
-        'deriv_oauth_state',
-    ].forEach(key => localStorage.removeItem(key));
-
-    window.location.href = '/login';
-};
-
-// ======================================================
 // CHECK LOGIN STATUS
 // ======================================================
 
@@ -379,6 +257,9 @@ export const restoreSession = async () => {
     } catch (error) {
         console.error(error);
 
+        // Use logout from config - this will be imported from config
+        // but we need to import it first
+        const { logoutDeriv } = await import('../config/config');
         logoutDeriv();
 
         return null;
